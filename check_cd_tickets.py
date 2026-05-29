@@ -46,7 +46,23 @@ def tickets_available():
 
         page.get_by_label("Odkud").fill("Praha hl.n.")
         page.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
-        page.get_by_placeholder("Datum").fill("20. 9. 2026")
+       # Open date picker
+        page.get_by_role("button", name="Datum").click()
+
+        # Wait for calendar
+        page.wait_for_selector("div.react-datepicker")
+
+        # Select year
+        page.get_by_role("button", name="Vybrat rok").click()
+        page.get_by_role("option", name="2026").click()
+
+        # Select month
+        page.get_by_role("button", name="Vybrat měsíc").click()
+        page.get_by_role("option", name="září").click()
+
+        # Select day
+        page.get_by_role("button", name="20").click()
+
 
 
         page.get_by_role("button", name="Vyhledat spojení").click()
