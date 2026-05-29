@@ -1,0 +1,39 @@
+name: Check CD Tickets
+
+on:
+  schedule:
+    - cron: "0 */1 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run ticket checker
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      run: python check_cd_tickets.py
+
+    - name: Commit state file
+      if: always()
+      run: |
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        git add state.json || true
+        git commit -m "Update state" || true
+        git push || true
