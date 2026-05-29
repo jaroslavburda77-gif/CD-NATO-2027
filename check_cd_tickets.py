@@ -3,7 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from playwright.sync_api import sync_playwright
 
-EMAIL_TO = "jaroslav_burda@seznam.cz"
+EMAIL_TO = "jaroslav_burda_test@seznam.cz"
 EMAIL_FROM = os.environ["SMTP_FROM"]
 SMTP_SERVER = os.environ["SMTP_SERVER"]
 SMTP_USER = os.environ["SMTP_USER"]
@@ -37,38 +37,43 @@ def tickets_available():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
+        # Open CD.cz
         page.goto("https://www.cd.cz/")
 
+        # Accept cookies if present
         try:
             page.get_by_role("button", name="Souhlasím").click(timeout=3000)
         except:
             pass
 
+        # Fill "From" and "To"
         page.get_by_label("Odkud").fill("Praha hl.n.")
         page.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
-       # Open date picker
-        page.get_by_role("button", name="Datum").click()
+
+        # --- DATE PICKER FIXED SECTION ---
+        # Click the date input (React datepicker)
+        page.locator("input.react-datepicker-ignore-onclickoutside").click()
 
         # Wait for calendar
         page.wait_for_selector("div.react-datepicker")
 
         # Select year
-        page.get_by_role("button", name="Vybrat rok").click()
-        page.get_by_role("option", name="2026").click()
+        page.locator("select.react-datepicker__year-select").select_option("2026")
 
-        # Select month
-        page.get_by_role("button", name="Vybrat měsíc").click()
-        page.get_by_role("option", name="září").click()
+        # Select month (0 = Jan, 8 = Sep)
+        page.locator("select.react-datepicker__month-select").select_option("8")
 
-        # Select day
-        page.get_by_role("button", name="20").click()
+        # Select day 20
+        page.locator("div.react-datepicker__day--020").click()
+        # --- END DATE PICKER ---
 
-
-
+        # Click search
         page.get_by_role("button", name="Vyhledat spojení").click()
 
+        # Wait for results to load
         page.wait_for_timeout(8000)
 
+        # Check if "Koupit jízdenku" appears
         content = page.content()
         browser.close()
 
