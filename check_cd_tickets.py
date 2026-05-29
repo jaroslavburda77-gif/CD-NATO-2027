@@ -46,34 +46,24 @@ def tickets_available():
         except:
             pass
 
+        # --- SWITCH INTO IFRAME ---
+        iframe_element = page.wait_for_selector("iframe[id^='search-form']")
+        iframe = iframe_element.content_frame()
+
         # Fill "From" and "To"
-        page.get_by_label("Odkud").fill("Praha hl.n.")
-        page.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
+        iframe.get_by_label("Odkud").fill("Praha hl.n.")
+        iframe.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
 
-        # --- DATE PICKER FIXED SECTION ---
-        # Click the date input (React datepicker)
-        page.locator("input.react-datepicker-ignore-onclickoutside").click()
-
-        # Wait for calendar
-        page.wait_for_selector("div.react-datepicker")
-
-        # Select year
-        page.locator("select.react-datepicker__year-select").select_option("2026")
-
-        # Select month (0 = Jan, 8 = Sep)
-        page.locator("select.react-datepicker__month-select").select_option("8")
-
-        # Select day 20
-        page.locator("div.react-datepicker__day--020").click()
-        # --- END DATE PICKER ---
+        # Fill date (now works because we are inside iframe)
+        iframe.get_by_placeholder("Datum").fill("20. 9. 2026")
 
         # Click search
-        page.get_by_role("button", name="Vyhledat spojení").click()
+        iframe.get_by_role("button", name="Vyhledat spojení").click()
 
-        # Wait for results to load
+        # Wait for results
         page.wait_for_timeout(8000)
 
-        # Check if "Koupit jízdenku" appears
+        # Check for ticket availability
         content = page.content()
         browser.close()
 
