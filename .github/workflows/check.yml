@@ -1,13 +1,8 @@
-name: Check CD Tickets
-
-on:
-  schedule:
-    - cron: "0 */1 * * *"
-  workflow_dispatch:
-
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
     - name: Checkout repo
@@ -19,7 +14,9 @@ jobs:
         python-version: "3.11"
 
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: |
+        pip install -r requirements.txt
+        python -m playwright install --with-deps chromium
 
     - name: Run ticket checker
       env:
@@ -34,6 +31,6 @@ jobs:
       run: |
         git config user.name "github-actions"
         git config user.email "actions@github.com"
-        git add state.json || true
+        git add state.txt || true
         git commit -m "Update state" || true
         git push || true
