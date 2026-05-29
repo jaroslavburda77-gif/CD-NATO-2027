@@ -46,7 +46,8 @@ def tickets_available():
 
         page.get_by_label("Odkud").fill("Praha hl.n.")
         page.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
-        page.get_by_label("Datum").fill("20. 9. 2026")
+        page.get_by_placeholder("Datum").fill("20. 9. 2026")
+
 
         page.get_by_role("button", name="Vyhledat spojení").click()
 
