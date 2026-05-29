@@ -1,14 +1,7 @@
-import requests
+import os
 import smtplib
 from email.mime.text import MIMEText
-import json
-import os
-
-API_BASE = "https://api.cd.cz/routeplanner"
-
-ORIGIN = "5400001"   # Praha hl.n.
-DEST = "3450059"     # Mošnov, Ostrava Airport
-DATE = "2026-09-20"
+from playwright.sync_api import sync_playwright
 
 EMAIL_TO = "jaroslav_burda_test@seznam.cz"
 EMAIL_FROM = os.environ["SMTP_FROM"]
@@ -16,42 +9,20 @@ SMTP_SERVER = os.environ["SMTP_SERVER"]
 SMTP_USER = os.environ["SMTP_USER"]
 SMTP_PASS = os.environ["SMTP_PASS"]
 
-STATE_FILE = "state.json"
+STATE_FILE = "state.txt"
 
 
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {"notified": False}
-    with open(STATE_FILE, "r") as f:
-        return json.load(f)
+def already_notified():
+    return os.path.exists(STATE_FILE)
 
 
-def save_state(state):
+def mark_notified():
     with open(STATE_FILE, "w") as f:
-        json.dump(state, f)
-
-
-def search_connections():
-    payload = {
-        "from": ORIGIN,
-        "to": DEST,
-        "date": DATE,
-        "time": "00:00",
-        "direct": False
-    }
-    r = requests.post(f"{API_BASE}/connections/search", json=payload)
-    r.raise_for_status()
-    return r.json()
-
-
-def check_ticket_offer(connection):
-    offer_payload = {"connection": connection}
-    r = requests.post(f"{API_BASE}/tickets", json=offer_payload)
-    return r.status_code == 200
+        f.write("notified")
 
 
 def send_email():
-    msg = MIMEText(f"Tickets are now available for {DATE} Praha → Mošnov Airport.")
+    msg = MIMEText("Tickets are now available for 20. 9. 2026 Praha → Mošnov,Ostrava Airport.")
     msg["Subject"] = "ČD Ticket Availability Alert"
     msg["From"] = EMAIL_FROM
     msg["To"] = EMAIL_TO
@@ -61,24 +32,51 @@ def send_email():
         server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
 
 
-def main():
-    state = load_state()
+def tickets_available():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    if state.get("notified"):
+        # Open CD homepage
+        page.goto("https://www.cd.cz/")
+
+        # Accept cookies if banner appears (selector may need adjustment)
+        try:
+            page.get_by_role("button", name="Souhlasím").click(timeout=3000)
+        except:
+            pass
+
+        # Fill "From" and "To"
+        page.get_by_label("Odkud").fill("Praha hl.n.")
+        page.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
+
+        # Set date
+        page.get_by_label("Datum").fill("20. 9. 2026")
+
+        # Submit search (button text may vary)
+        page.get_by_role("button", name="Vyhledat spojení").click()
+
+        # Wait for results
+        page.wait_for_timeout(8000)
+
+        # Look for "Koupit jízdenku" in results
+        content = page.content()
+        browser.close()
+
+        return "Koupit jízdenku" in content
+
+
+def main():
+    if already_notified():
         print("Already notified earlier. Exiting.")
         return
 
-    data = search_connections()
-
-    for conn in data.get("connections", []):
-        if check_ticket_offer(conn):
-            send_email()
-            state["notified"] = True
-            save_state(state)
-            print("Tickets available — email sent.")
-            return
-
-    print("No tickets yet.")
+    if tickets_available():
+        send_email()
+        mark_notified()
+        print("Tickets available — email sent.")
+    else:
+        print("No tickets yet.")
 
 
 if __name__ == "__main__":
