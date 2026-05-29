@@ -37,28 +37,20 @@ def tickets_available():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        # Open CD.cz
-        page.goto("https://www.cd.cz/")
+        # Use the mobile site (MUCH simpler, no iframes)
+        page.goto("https://m.cd.cz/spojeni/")
 
-        # Accept cookies if present
-        try:
-            page.get_by_role("button", name="Souhlasím").click(timeout=3000)
-        except:
-            pass
+        # Fill "From"
+        page.fill("input[name='from']", "Praha hl.n.")
 
-        # --- SWITCH INTO IFRAME ---
-        iframe_element = page.wait_for_selector("iframe[id^='search-form']")
-        iframe = iframe_element.content_frame()
+        # Fill "To"
+        page.fill("input[name='to']", "Mošnov,Ostrava Airport")
 
-        # Fill "From" and "To"
-        iframe.get_by_label("Odkud").fill("Praha hl.n.")
-        iframe.get_by_label("Kam").fill("Mošnov,Ostrava Airport")
+        # Fill date (mobile site uses <input type='date'>)
+        page.fill("input[name='date']", "2026-09-20")
 
-        # Fill date (now works because we are inside iframe)
-        iframe.get_by_placeholder("Datum").fill("20. 9. 2026")
-
-        # Click search
-        iframe.get_by_role("button", name="Vyhledat spojení").click()
+        # Submit
+        page.click("button[type='submit']")
 
         # Wait for results
         page.wait_for_timeout(8000)
